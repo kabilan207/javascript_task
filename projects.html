@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Number Guessing Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 500px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .input {
+      margin: 10px;
+    }
+    .button {
+      padding: 10px;
+      cursor: pointer;
+    }
+    .result {
+      margin-top: 20px;
+      font-size: 1.2em;
+    }
+    .timer {
+      margin-top: 10px;
+      font-size: 1.2em;
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h1>Guess the Number Game</h1>
+
+  <div id="start-game">
+    <label for="name">Enter your name: </label>
+    <input type="text" id="name" placeholder="Your name">
+    <button onclick="startGame()">Start Game</button>
+  </div>
+
+  <div id="game" style="display:none;">
+    <h3>Guess the number (4 digits, no repeats):</h3>
+    <input type="text" id="guess" maxlength="4" placeholder="Enter 4 digits">
+    <button onclick="makeGuess()">Guess</button>
+    <div class="result" id="result"></div>
+    <div id="moves"></div>
+    <div class="timer" id="timer">Time Left: 30s</div>
+  </div>
+
+  <div id="correct-guess" style="display:none;">
+    <h3>Congratulations!</h3>
+    <p id="player-score"></p>
+  </div>
+
+  <script>
+    let gameStarted = false;
+    let targetNumber = '';
+    let guesses = 0;
+    let startTime;
+    let countdown;
+    let remainingTime = 30;
+    let playerScores = JSON.parse(localStorage.getItem('playerScores')) || [];
+
+    function startGame() {
+      const name = document.getElementById('name').value.trim();
+      if (name === '') {
+        alert('Please enter your name!');
+        return;
+      }
+
+      gameStarted = true;
+      document.getElementById('start-game').style.display = 'none';
+      document.getElementById('game').style.display = 'block';
+      document.getElementById('moves').innerHTML = `Moves: 0`;
+
+      // Generate the 4-digit number
+      targetNumber = generateRandomNumber();
+      guesses = 0;
+      startTime = Date.now();
+
+      // Reset timer and start countdown
+      remainingTime = 30;
+      document.getElementById('timer').innerHTML = `Time Left: ${remainingTime}s`;
+      countdown = setInterval(updateTimer, 1000);
+    }
+
+    function generateRandomNumber() {
+      let number = '';
+      while (number.length < 4) {
+        let digit = Math.floor(Math.random() * 10);
+        if (!number.includes(digit)) {
+          number += digit;
+        }
+      }
+      return number;
+    }
+
+    function makeGuess() {
+      const guess = document.getElementById('guess').value.trim();
+      if (!/^\d{4}$/.test(guess) || new Set(guess.split('')).size !== 4) {
+        alert('Please enter a valid 4-digit number with no repeating digits.');
+        return;
+      }
+
+      guesses++;
+      const result = checkGuess(guess);
+      document.getElementById('result').innerHTML = result;
+      document.getElementById('moves').innerHTML = `Moves: ${guesses}`;
+
+      // Check if the guess is correct
+      if (guess === targetNumber) {
+        clearInterval(countdown);  // Stop the timer if guessed correctly
+        const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
+        document.getElementById('player-score').innerHTML = `Player: ${document.getElementById('name').value}, Time: ${elapsedTime} seconds, Guesses: ${guesses}`;
+        document.getElementById('game').style.display = 'none';
+        document.getElementById('correct-guess').style.display = 'block';
+        
+        saveScore(elapsedTime, guesses);
+      }
+    }
+
+    function checkGuess(guess) {
+      let result = '';
+      for (let i = 0; i < 4; i++) {
+        if (guess[i] === targetNumber[i]) {
+          result += '+';
+        } else if (targetNumber.includes(guess[i])) {
+          result += '-';
+        }
+      }
+      return result;
+    }
+
+    function saveScore(time, guesses) {
+      const name = document.getElementById('name').value.trim();
+      const currentScore = { name, time: parseFloat(time), guesses };
+
+      // Add the new score to the list
+      playerScores.push(currentScore);
+
+      // Save the updated scores back to localStorage
+      localStorage.setItem('playerScores', JSON.stringify(playerScores));
+    }
+
+    function updateTimer() {
+      remainingTime--;
+      document.getElementById('timer').innerHTML = `Time Left: ${remainingTime}s`;
+
+      if (remainingTime <= 0) {
+        clearInterval(countdown);  // Stop the timer when time is up
+        alert("Time's up! You didn't guess the number in time.");
+        saveScore(30, guesses); // Save score when time runs out
+        gameStarted = false;
+        document.getElementById('game').style.display = 'none';
+        document.getElementById('start-game').style.display = 'block';
+      }
+    }
+  </script>
+</body>
+</html>
